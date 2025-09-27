@@ -331,7 +331,7 @@ const Contact = () => {
         </div>
       </div>
     </section>
-    );
+  );
 };
 
 export default Contact;
