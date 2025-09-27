@@ -13,6 +13,7 @@
 
 [functions]
   node_bundler = "esbuild"
+  "netlify/functions"
 
 [[headers]]
   for = "/*"
