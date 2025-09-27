@@ -1,48 +1,85 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Shield, Clock } from 'lucide-react';
 
-type SubmitStatus = 'idle' | 'success' | 'error';
-
-const Contact: React.FC = () => {
+const Contact = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     subject: '',
-    message: '',
-    // honeypot (tidak ditampilkan ke user)
-    hp: '',
+    message: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
-  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [lastSubmitTime, setLastSubmitTime] = useState<number>(0);
 
-  // Anti-spam
-  const COOLDOWN_TIME = 60_000; // 1 menit
+  const COOLDOWN_TIME = 60000; // 1 menit
   const MAX_SUBMISSIONS_PER_HOUR = 3;
 
-  useEffect(() => {
-    const now = Date.now();
-    const lastHourReset = parseInt(localStorage.getItem('lastHourReset') || '0', 10);
-    if (!lastHourReset) {
-      localStorage.setItem('lastHourReset', String(now));
-      localStorage.setItem('hourlySubmissions', '0');
-    } else if (now - lastHourReset > 3_600_000) {
-      localStorage.setItem('lastHourReset', String(now));
-      localStorage.setItem('hourlySubmissions', '0');
-    }
-  }, []);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const now = Date.now();
+    const timeSinceLastSubmit = now - lastSubmitTime;
+
+    if (timeSinceLastSubmit < COOLDOWN_TIME) {
+      setSubmitStatus('error');
+      return;
+    }
+
+    const hourlySubmissions = parseInt(localStorage.getItem('hourlySubmissions') || '0');
+    const lastHourReset = parseInt(localStorage.getItem('lastHourReset') || '0');
+
+    if (now - lastHourReset > 3600000) {
+      localStorage.setItem('hourlySubmissions', '0');
+      localStorage.setItem('lastHourReset', now.toString());
+    } else if (hourlySubmissions >= MAX_SUBMISSIONS_PER_HOUR) {
+      setSubmitStatus('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitStatus('idle');
+
+    try {
+      const response = await fetch('/api/sendEmail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Pengiriman gagal');
+      }
+
+      // update anti spam
+      setLastSubmitTime(now);
+      localStorage.setItem('hourlySubmissions', (hourlySubmissions + 1).toString());
+
+      setSubmitStatus('success');
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      setSubmitStatus('error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canSubmit = () => {
     const now = Date.now();
     const timeSinceLastSubmit = now - lastSubmitTime;
-    const hourlySubmissions = parseInt(localStorage.getItem('hourlySubmissions') || '0', 10);
+    const hourlySubmissions = parseInt(localStorage.getItem('hourlySubmissions') || '0');
+
     return timeSinceLastSubmit >= COOLDOWN_TIME && hourlySubmissions < MAX_SUBMISSIONS_PER_HOUR;
   };
 
@@ -53,90 +90,25 @@ const Contact: React.FC = () => {
     return remaining > 0 ? remaining : 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitStatus('idle');
-    setErrorMsg('');
-
-    const now = Date.now();
-    const timeSinceLastSubmit = now - lastSubmitTime;
-
-    // Cooldown
-    if (timeSinceLastSubmit < COOLDOWN_TIME) {
-      setSubmitStatus('error');
-      setErrorMsg(`Terlalu cepat. Tunggu ${getRemainingCooldown()} detik lagi.`);
-      return;
-    }
-
-    // Limit per jam
-    const hourlySubmissions = parseInt(localStorage.getItem('hourlySubmissions') || '0', 10);
-    const lastHourReset = parseInt(localStorage.getItem('lastHourReset') || '0', 10);
-    if (now - lastHourReset > 3_600_000) {
-      localStorage.setItem('hourlySubmissions', '0');
-      localStorage.setItem('lastHourReset', String(now));
-    } else if (hourlySubmissions >= MAX_SUBMISSIONS_PER_HOUR) {
-      setSubmitStatus('error');
-      setErrorMsg('Batas 3 pesan per jam sudah tercapai. Coba lagi nanti.');
-      return;
-    }
-
-    // Validasi sederhana
-    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
-      setSubmitStatus('error');
-      setErrorMsg('Harap lengkapi semua kolom.');
-      return;
-    }
-
-    // Honeypot (bot jebakan)
-    if (formData.hp) {
-      // Purely pretend success untuk bot
-      setSubmitStatus('success');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await fetch('/.netlify/functions/send-contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          subject: formData.subject,
-          message: formData.message,
-          meta: {
-            sentAt: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            page: window.location.href,
-          },
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || data?.ok !== true) {
-        throw new Error(data?.error || 'Gagal mengirim pesan.');
-      }
-
-      // Update anti-spam counter
-      const newHourlyCount = (parseInt(localStorage.getItem('hourlySubmissions') || '0', 10) || 0) + 1;
-      localStorage.setItem('hourlySubmissions', String(newHourlyCount));
-      setLastSubmitTime(now);
-
-      setSubmitStatus('success');
-      setFormData({ name: '', email: '', subject: '', message: '', hp: '' });
-    } catch (err: any) {
-      setSubmitStatus('error');
-      setErrorMsg(err?.message || 'Terjadi kesalahan saat mengirim pesan.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const contactInfo = [
-    { icon: Mail, title: 'Email', value: 'shawavatritya@gmail.com', link: 'mailto:shawavatritya@gmail.com' },
-    { icon: Phone, title: 'WhatsApp', value: '085187805786', link: 'https://wa.me/6285187805786' },
-    { icon: MapPin, title: 'Domisili', value: 'Cileungsi, Kab. Bogor, Jawa Barat', link: 'https://maps.app.goo.gl/9UCcE1a2dkAqDWUq5' },
+    {
+      icon: Mail,
+      title: 'Email',
+      value: 'shawavatritya@gmail.com',
+      link: 'mailto:shawavatritya@gmail.com'
+    },
+    {
+      icon: Phone,
+      title: 'WhatsApp',
+      value: '085187805786',
+      link: 'https://wa.me/6285187805786'
+    },
+    {
+      icon: MapPin,
+      title: 'Domisili',
+      value: 'Cileungsi, Kab. Bogor, Jawa Barat',
+      link: 'https://maps.app.goo.gl/9UCcE1a2dkAqDWUq5'
+    }
   ];
 
   return (
@@ -156,7 +128,7 @@ const Contact: React.FC = () => {
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* LEFT */}
+          {/* LEFT SIDE CONTACT INFO */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -168,19 +140,23 @@ const Contact: React.FC = () => {
               <div>
                 <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">Mari diskusikan proyek Anda</h3>
                 <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Saya selalu tertarik dengan peluang baru dan proyek yang menarik. Baik Anda membutuhkan bantuan dalam
-                  bidang teknologi, data entry, atau instalasi jaringan, saya siap membantu dengan kemampuan terbaik saya.
+                  Saya selalu tertarik dengan peluang baru dan proyek yang menarik. 
+                  Baik Anda membutuhkan bantuan dalam bidang teknologi, data entry, atau 
+                  instalasi jaringan, saya siap membantu dengan kemampuan terbaik saya.
                 </p>
               </div>
 
               <div className="space-y-4">
-                {contactInfo.map(info => (
+                {contactInfo.map((info) => (
                   <motion.a
                     key={info.title}
                     href={info.link}
                     whileHover={{ x: 5, scale: 1.02 }}
                     className="flex items-center space-x-4 p-4 sm:p-5 bg-white dark:bg-gray-900 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 border border-gray-100 dark:border-gray-700"
-                    {...(info.link.startsWith('http') && { target: '_blank', rel: 'noopener noreferrer' })}
+                    {...(info.link.startsWith('http') && {
+                      target: '_blank',
+                      rel: 'noopener noreferrer'
+                    })}
                   >
                     <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 dark:bg-blue-500 group-hover:bg-blue-700 dark:group-hover:bg-blue-600 text-white rounded-lg flex items-center justify-center transition-colors duration-300">
                       <info.icon size={18} className="sm:w-5 sm:h-5" />
@@ -192,6 +168,7 @@ const Contact: React.FC = () => {
                   </motion.a>
                 ))}
 
+                {/* Tambah embed Google Maps */}
                 <div className="rounded-xl overflow-hidden shadow-md mt-6">
                   <iframe
                     title="Domisili Map"
@@ -208,7 +185,7 @@ const Contact: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* RIGHT: FORM */}
+          {/* RIGHT SIDE FORM */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -218,52 +195,51 @@ const Contact: React.FC = () => {
           >
             <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-xl shadow-lg space-y-6 border border-gray-100 dark:border-gray-700">
               {submitStatus === 'success' && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start space-x-3">
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start space-x-3"
+                >
                   <Mail className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-green-800 dark:text-green-300 text-sm font-medium">Pesan terkirim!</p>
-                    <p className="text-green-700 dark:text-green-400 text-xs mt-1">Terima kasih, saya akan segera membalas melalui email Anda.</p>
+                    <p className="text-green-800 dark:text-green-300 text-sm font-medium">Pesan berhasil dikirim!</p>
                   </div>
                 </motion.div>
               )}
-
+              
               {submitStatus === 'error' && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start space-x-3">
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start space-x-3"
+                >
                   <Shield className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-red-800 dark:text-red-300 text-sm font-medium">Tidak bisa mengirim</p>
-                    <p className="text-red-700 dark:text-red-400 text-xs mt-1">{errorMsg || `Harap tunggu ${getRemainingCooldown()} detik sebelum mengirim lagi.`}</p>
+                    <p className="text-red-800 dark:text-red-300 text-sm font-medium">Gagal mengirim!</p>
+                    <p className="text-red-700 dark:text-red-400 text-xs mt-1">
+                      Pastikan semua data benar atau coba beberapa saat lagi.
+                    </p>
                   </div>
                 </motion.div>
               )}
 
-              {/* Info Anti-spam (FIX penutupan tag) */}
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <div className="flex items-start space-x-3">
                   <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-blue-800 dark:text-blue-300 text-xs font-medium">Proteksi Anti-Spam Aktif</p>
-                    <p className="text-blue-700 dark:text-blue-400 text-xs mt-1">Maksimal 3 pesan per jam • Cooldown 1 menit antar pesan</p>
+                    <p className="text-blue-700 dark:text-blue-400 text-xs mt-1">
+                      Maksimal 3 pesan per jam • Cooldown 1 menit antar pesan
+                    </p>
                   </div>
-                </div>
+                </motion.div>
               </div>
 
-              {/* Honeypot (disembunyikan dari user nyata) */}
-              <input
-                type="text"
-                name="hp"
-                value={formData.hp}
-                onChange={handleChange}
-                tabIndex={-1}
-                autoComplete="off"
-                className="hidden"
-                aria-hidden="true"
-              />
-
-              {/* Fields */}
               <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
-                  <label htmlFor="name" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">Nama</label>
+                  <label htmlFor="name" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">
+                    Nama
+                  </label>
                   <input
                     type="text"
                     id="name"
@@ -277,7 +253,9 @@ const Contact: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="email" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">Email</label>
+                  <label htmlFor="email" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">
+                    Email
+                  </label>
                   <input
                     type="email"
                     id="email"
@@ -293,7 +271,9 @@ const Contact: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="subject" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">Subjek</label>
+                <label htmlFor="subject" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">
+                  Subjek
+                </label>
                 <input
                   type="text"
                   id="subject"
@@ -308,7 +288,9 @@ const Contact: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">Pesan</label>
+                <label htmlFor="message" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">
+                  Pesan
+                </label>
                 <textarea
                   id="message"
                   name="message"
@@ -329,7 +311,7 @@ const Contact: React.FC = () => {
                 disabled={isSubmitting || !canSubmit()}
                 className={`w-full py-2 sm:py-3 px-6 rounded-lg text-sm sm:text-base font-semibold transition-all duration-300 flex items-center justify-center space-x-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                   canSubmit() && !isSubmitting
-                    ? 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 hover:scale-105'
+                    ? 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 hover:scale-102'
                     : 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed opacity-60'
                 }`}
               >
