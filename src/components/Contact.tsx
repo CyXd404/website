@@ -234,7 +234,6 @@ const Contact = () => {
                   </div>
                 </motion.div>
               </div>
-
               <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label htmlFor="name" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">
