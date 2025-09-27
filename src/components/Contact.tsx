@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Send, Shield, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, Shield, Clock } from 'lucide-react';
 
-type SubmitStatus = 'idle' | 'loading' | 'success' | 'error';
+type SubmitStatus = 'idle' | 'success' | 'error';
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +17,6 @@ const Contact: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [errorMsg, setErrorMsg] = useState<string>('');
-  const [successMsg, setSuccessMsg] = useState<string>('');
   const [lastSubmitTime, setLastSubmitTime] = useState<number>(0);
 
   // Anti-spam
@@ -58,7 +57,6 @@ const Contact: React.FC = () => {
     e.preventDefault();
     setSubmitStatus('idle');
     setErrorMsg('');
-    setSuccessMsg('');
 
     const now = Date.now();
     const timeSinceLastSubmit = now - lastSubmitTime;
@@ -97,10 +95,8 @@ const Contact: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    setSubmitStatus('loading');
-    
     try {
-      const response = await fetch('/.netlify/functions/send-contact', {
+      const res = await fetch('/.netlify/functions/send-contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -108,14 +104,18 @@ const Contact: React.FC = () => {
           email: formData.email,
           subject: formData.subject,
           message: formData.message,
-          hp: formData.hp, // honeypot
+          meta: {
+            sentAt: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            page: window.location.href,
+          },
         }),
       });
 
-      const data = await response.json();
+      const data = await res.json().catch(() => ({}));
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to send message. Please try again.');
+      if (!res.ok || data?.ok !== true) {
+        throw new Error(data?.error || 'Gagal mengirim pesan.');
       }
 
       // Update anti-spam counter
@@ -124,18 +124,10 @@ const Contact: React.FC = () => {
       setLastSubmitTime(now);
 
       setSubmitStatus('success');
-      setSuccessMsg(data.message || 'Message sent successfully!');
       setFormData({ name: '', email: '', subject: '', message: '', hp: '' });
-      
-      // Auto-hide success message after 5 seconds
-      setTimeout(() => {
-        setSubmitStatus('idle');
-        setSuccessMsg('');
-      }, 5000);
-      
     } catch (err: any) {
       setSubmitStatus('error');
-      setErrorMsg(err?.message || 'An error occurred while sending the message.');
+      setErrorMsg(err?.message || 'Terjadi kesalahan saat mengirim pesan.');
     } finally {
       setIsSubmitting(false);
     }
@@ -226,44 +218,21 @@ const Contact: React.FC = () => {
           >
             <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-xl shadow-lg space-y-6 border border-gray-100 dark:border-gray-700">
               {submitStatus === 'success' && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }} 
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start space-x-3"
-                >
-                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start space-x-3">
+                  <Mail className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-green-800 dark:text-green-300 text-sm font-medium">Message Sent Successfully!</p>
-                    <p className="text-green-700 dark:text-green-400 text-xs mt-1">{successMsg}</p>
+                    <p className="text-green-800 dark:text-green-300 text-sm font-medium">Pesan terkirim!</p>
+                    <p className="text-green-700 dark:text-green-400 text-xs mt-1">Terima kasih, saya akan segera membalas melalui email Anda.</p>
                   </div>
                 </motion.div>
               )}
 
               {submitStatus === 'error' && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }} 
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start space-x-3"
-                >
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start space-x-3">
+                  <Shield className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-red-800 dark:text-red-300 text-sm font-medium">Failed to Send Message</p>
-                    <p className="text-red-700 dark:text-red-400 text-xs mt-1">{errorMsg}</p>
-                  </div>
-                </motion.div>
-              )}
-
-              {submitStatus === 'loading' && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }} 
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-start space-x-3"
-                >
-                  <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mt-0.5 flex-shrink-0"></div>
-                  <div>
-                    <p className="text-blue-800 dark:text-blue-300 text-sm font-medium">Sending Message...</p>
-                    <p className="text-blue-700 dark:text-blue-400 text-xs mt-1">Please wait while we send your message.</p>
+                    <p className="text-red-800 dark:text-red-300 text-sm font-medium">Tidak bisa mengirim</p>
+                    <p className="text-red-700 dark:text-red-400 text-xs mt-1">{errorMsg || `Harap tunggu ${getRemainingCooldown()} detik sebelum mengirim lagi.`}</p>
                   </div>
                 </motion.div>
               )}
@@ -357,19 +326,14 @@ const Contact: React.FC = () => {
                 type="submit"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                disabled={isSubmitting || !canSubmit() || submitStatus === 'loading'}
+                disabled={isSubmitting || !canSubmit()}
                 className={`w-full py-2 sm:py-3 px-6 rounded-lg text-sm sm:text-base font-semibold transition-all duration-300 flex items-center justify-center space-x-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
-                  canSubmit() && !isSubmitting && submitStatus !== 'loading'
+                  canSubmit() && !isSubmitting
                     ? 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 hover:scale-105'
                     : 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed opacity-60'
                 }`}
               >
-                {submitStatus === 'loading' ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Sending...</span>
-                  </>
-                ) : !canSubmit() ? (
+                {!canSubmit() ? (
                   <>
                     <Clock size={18} className="sm:w-5 sm:h-5" />
                     <span>Tunggu {getRemainingCooldown()}s</span>
@@ -377,7 +341,7 @@ const Contact: React.FC = () => {
                 ) : (
                   <>
                     <Send size={18} className="sm:w-5 sm:h-5" />
-                    <span>Send Message</span>
+                    <span>{isSubmitting ? 'Mengirim...' : 'Kirim Pesan'}</span>
                   </>
                 )}
               </motion.button>
