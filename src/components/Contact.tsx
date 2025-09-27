@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Shield, Clock } from 'lucide-react';
 
@@ -12,10 +12,23 @@ const Contact = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [lastSubmitTime, setLastSubmitTime] = useState<number>(0);
+  const [lastSubmitTime, setLastSubmitTime] = useState<number>(() => {
+    return parseInt(localStorage.getItem('lastSubmitTime') || '0');
+  });
 
   const COOLDOWN_TIME = 60000; // 1 menit
   const MAX_SUBMISSIONS_PER_HOUR = 3;
+
+  useEffect(() => {
+    localStorage.setItem('lastSubmitTime', lastSubmitTime.toString());
+  }, [lastSubmitTime]);
+
+  useEffect(() => {
+    if (!localStorage.getItem('lastHourReset')) {
+      localStorage.setItem('lastHourReset', Date.now().toString());
+      localStorage.setItem('hourlySubmissions', '0');
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -47,7 +60,7 @@ const Contact = () => {
     setSubmitStatus('idle');
 
     try {
-      const response = await fetch('/.netlify/functions/sendEmail', {
+      const response = await fetch('/api/sendEmail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -102,7 +115,10 @@ const Contact = () => {
   ];
 
   return (
-    <section id="contact" className="py-20 bg-gray-50 dark:bg-gray-800 transition-colors duration-300">
+    <section
+      id="contact"
+      className="py-20 bg-gray-50 dark:bg-gray-800 transition-colors duration-300"
+    >
       <div className="container-responsive">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -120,7 +136,7 @@ const Contact = () => {
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* Kiri */}
+          {/* LEFT SIDE */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -135,8 +151,8 @@ const Contact = () => {
                 </h3>
                 <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
                   Saya selalu tertarik dengan peluang baru dan proyek yang menarik.
-                  Baik Anda membutuhkan bantuan dalam bidang teknologi, data entry, atau instalasi jaringan,
-                  saya siap membantu dengan kemampuan terbaik saya.
+                  Baik Anda membutuhkan bantuan dalam bidang teknologi, data entry,
+                  atau instalasi jaringan, saya siap membantu dengan kemampuan terbaik saya.
                 </p>
               </div>
 
@@ -149,7 +165,7 @@ const Contact = () => {
                     className="flex items-center space-x-4 p-4 sm:p-5 bg-white dark:bg-gray-900 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 border border-gray-100 dark:border-gray-700"
                     {...(info.link.startsWith('http') && {
                       target: '_blank',
-                      rel: 'noopener noreferrer'
+                      rel: 'noopener noreferrer',
                     })}
                   >
                     <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 dark:bg-blue-500 group-hover:bg-blue-700 dark:group-hover:bg-blue-600 text-white rounded-lg flex items-center justify-center transition-colors duration-300">
@@ -182,7 +198,7 @@ const Contact = () => {
             </div>
           </motion.div>
 
-          {/* Kanan (Form) */}
+          {/* RIGHT SIDE (FORM) */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -243,7 +259,10 @@ const Contact = () => {
 
               <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
-                  <label htmlFor="name" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">
+                  <label
+                    htmlFor="name"
+                    className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2"
+                  >
                     Nama
                   </label>
                   <input
@@ -254,13 +273,16 @@ const Contact = () => {
                     onChange={handleChange}
                     required
                     disabled={isSubmitting}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-Sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="Nama Anda"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2"
+                  >
                     Email
                   </label>
                   <input
@@ -278,7 +300,10 @@ const Contact = () => {
               </div>
 
               <div>
-                <label htmlFor="subject" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">
+                <label
+                  htmlFor="subject"
+                  className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2"
+                >
                   Subjek
                 </label>
                 <input
@@ -295,7 +320,10 @@ const Contact = () => {
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2">
+                <label
+                  htmlFor="message"
+                  className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2"
+                >
                   Pesan
                 </label>
                 <textarea
@@ -325,7 +353,9 @@ const Contact = () => {
                 {!canSubmit() ? (
                   <>
                     <Clock size={18} className="sm:w-5 sm:h-5" />
-                    <span>Tunggu {getRemainingCooldown()}s</span>
+                    <span>
+                      Tunggu {getRemainingCooldown() > 0 ? `${getRemainingCooldown()}s` : 'sebentar'}
+                    </span>
                   </>
                 ) : (
                   <>
