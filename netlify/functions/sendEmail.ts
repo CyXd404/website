@@ -23,7 +23,7 @@ export const handler: Handler = async (event) => {
 
     const data = await resend.emails.send({
       from: "onboarding@resend.dev", // Ganti jika perlu
-      to: "shawavatritya@gmail.com",  // Email tujuanmu
+      to: "shawavatritya@outlook.co.id",  // Email tujuanmu
       subject: subject || "Pesan Baru dari Form Kontak",
       html: `
         <p><strong>Nama:</strong> ${name}</p>
