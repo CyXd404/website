@@ -1,197 +1,61 @@
+// netlify/functions/send-contact.ts
 import type { Handler } from '@netlify/functions';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const handler: Handler = async (event, context) => {
-  // Set CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  // Handle preflight OPTIONS request
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers,
-      body: '',
-    };
-  }
-
-  // Only allow POST requests
+export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ 
-        success: false, 
-        error: 'Method not allowed. Only POST requests are accepted.' 
-      }),
-    };
+    return { statusCode: 405, body: 'Method Not Allowed' };
   }
+
+  const headers = { 'Content-Type': 'application/json' };
 
   try {
-    // Parse request body
-    const body = JSON.parse(event.body || '{}');
-    const { name, email, subject, message, hp } = body;
+    const payload = JSON.parse(event.body || '{}');
 
-    // Honeypot check - if filled, pretend success but don't send
+    const { name, email, subject, message, meta, hp } = payload || {};
+
+    // Honeypot: jika terisi, anggap sukses (blokir bot)
     if (hp) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, message: 'Message sent successfully!' }),
-      };
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
     }
 
-    // Validate required fields
     if (!name || !email || !subject || !message) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ 
-          success: false, 
-          error: 'Missing required fields. Please fill in all fields.' 
-        }),
-      };
+      return { statusCode: 400, headers, body: JSON.stringify({ ok: false, error: 'Missing required fields' }) };
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ 
-          success: false, 
-          error: 'Invalid email format.' 
-        }),
-      };
-    }
+    const text = [
+      `Nama: ${name}`,
+      `Email: ${email}`,
+      `Subjek: ${subject}`,
+      ``,
+      `Pesan:`,
+      message,
+      ``,
+      `---`,
+      `Meta: ${JSON.stringify(meta || {}, null, 2)}`,
+      `Dikirim pada: ${new Date().toLocaleString('id-ID')}`,
+    ].join('\n');
 
-    // Check if Resend API key is configured
-    if (!process.env.RESEND_API_KEY) {
-      console.error('RESEND_API_KEY is not configured');
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ 
-          success: false, 
-          error: 'Email service is not configured. Please try again later.' 
-        }),
-      };
-    }
-
-    // Prepare email content
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 8px;">
-        <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <h2 style="color: #1f2937; margin-bottom: 20px; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
-            New Contact Form Message
-          </h2>
-          
-          <div style="margin-bottom: 20px;">
-            <h3 style="color: #374151; margin-bottom: 10px;">Contact Information:</h3>
-            <p style="margin: 5px 0;"><strong>Name:</strong> ${name}</p>
-            <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
-            <p style="margin: 5px 0;"><strong>Subject:</strong> ${subject}</p>
-          </div>
-          
-          <div style="margin-bottom: 20px;">
-            <h3 style="color: #374151; margin-bottom: 10px;">Message:</h3>
-            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; border-left: 4px solid #3b82f6;">
-              ${message.replace(/\n/g, '<br>')}
-            </div>
-          </div>
-          
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-            <p>This message was sent from your portfolio contact form.</p>
-            <p>Sent at: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</p>
-            <p>User Agent: ${event.headers['user-agent'] || 'Unknown'}</p>
-          </div>
-        </div>
-      </div>
-    `;
-
-    const emailText = `
-New Contact Form Message
-
-Contact Information:
-Name: ${name}
-Email: ${email}
-Subject: ${subject}
-
-Message:
-${message}
-
----
-This message was sent from your portfolio contact form.
-Sent at: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
-User Agent: ${event.headers['user-agent'] || 'Unknown'}
-    `;
-
-    // Send email using Resend
-    const emailResult = await resend.emails.send({
-      from: process.env.CONTACT_EMAIL_FROM || 'Portfolio Contact <onboarding@resend.dev>',
-      to: process.env.CONTACT_EMAIL_TO || 'shawavatritya@gmail.com',
-      replyTo: email,
+    const result = await resend.emails.send({
+      from: 'Portfolio Contact <onboarding@resend.dev>',
+      to: 'shawavatritya@gmail.com',
+      reply_to: email,
       subject: `Portfolio Contact: ${subject}`,
-      html: emailHtml,
-      text: emailText,
+      text,
     });
 
-    // Check if email was sent successfully
-    if (emailResult.error) {
-      console.error('Resend API error:', emailResult.error);
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ 
-          success: false, 
-          error: 'Failed to send email. Please try again later.' 
-        }),
-      };
+    if ((result as any)?.error) {
+      throw new Error((result as any).error?.message || 'Resend error');
     }
 
-    console.log('Email sent successfully:', emailResult.data?.id);
-
-    // Return success response
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ 
-        success: true, 
-        message: 'Message sent successfully! I will get back to you soon.',
-        emailId: emailResult.data?.id 
-      }),
-    };
-
-  } catch (error) {
-    console.error('Contact form error:', error);
-    
-    // Handle JSON parsing errors
-    if (error instanceof SyntaxError) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ 
-          success: false, 
-          error: 'Invalid request format.' 
-        }),
-      };
-    }
-
-    // Handle other errors
+    return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+  } catch (err: any) {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ 
-        success: false, 
-        error: 'An unexpected error occurred. Please try again later.' 
-      }),
+      body: JSON.stringify({ ok: false, error: err?.message || 'Failed to send' }),
     };
   }
 };
