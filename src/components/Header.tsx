@@ -30,12 +30,9 @@ export const Header: React.FC = () => {
   const scrollToSection = React.useCallback((href: string, route: string) => {
     if (location.pathname !== '/') {
       navigate('/');
-      // Gunakan timeout yang lebih pendek dan requestAnimationFrame
       setTimeout(() => {
-        requestAnimationFrame(() => {
-          const element = document.querySelector(href);
-          element?.scrollIntoView({ behavior: 'smooth' });
-        });
+        const element = document.querySelector(href);
+        element?.scrollIntoView({ behavior: 'smooth' });
       }, 50);
     } else {
       const element = document.querySelector(href);
@@ -44,55 +41,20 @@ export const Header: React.FC = () => {
     setIsMenuOpen(false);
   }, [location.pathname, navigate]);
 
-  // Tutup menu mobile ketika resize ke desktop
-  React.useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Prevent body scroll ketika menu mobile terbuka
+  // Fix body scroll ketika menu terbuka
   React.useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
-
     return () => {
       document.body.style.overflow = 'unset';
     };
   }, [isMenuOpen]);
 
-  const getNavItemClasses = (item: NavItem) => {
-    const isActive = (location.pathname === '/' && activeSection === item.id) ||
-                    (location.pathname === item.route && item.route !== '/');
-    
-    return `px-3 py-2 text-sm font-medium transition-colors relative ${
-      isActive
-        ? 'text-blue-600 dark:text-blue-400'
-        : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
-    }`;
-  };
-
-  const getMobileNavItemClasses = (item: NavItem) => {
-    const isActive = (location.pathname === '/' && activeSection === item.id) ||
-                    (location.pathname === item.route && item.route !== '/');
-    
-    return `block w-full text-left px-3 py-3 text-base font-medium rounded-md transition-colors ${
-      isActive
-        ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
-        : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-    }`;
-  };
-
   return (
-    <header className="fixed inset-x-0 top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+    <header className="fixed inset-x-0 top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -103,7 +65,6 @@ export const Header: React.FC = () => {
                 setIsMenuOpen(false);
               }}
               className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              aria-label="Go to homepage"
             >
               Portfolio
             </button>
@@ -115,13 +76,12 @@ export const Header: React.FC = () => {
               <button
                 key={item.name}
                 onClick={() => scrollToSection(item.href, item.route)}
-                className={getNavItemClasses(item)}
-                aria-current={
+                className={`px-3 py-2 text-sm font-medium transition-colors relative ${
                   (location.pathname === '/' && activeSection === item.id) ||
                   (location.pathname === item.route && item.route !== '/')
-                    ? 'page'
-                    : undefined
-                }
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
+                }`}
               >
                 {item.name}
                 {((location.pathname === '/' && activeSection === item.id) ||
@@ -143,47 +103,63 @@ export const Header: React.FC = () => {
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={isMenuOpen}
-              aria-controls="mobile-menu"
             >
               {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Mobile Navigation dengan AnimatePresence */}
-        <AnimatePresence>
-          {isMenuOpen && (
+      {/* Mobile Navigation - SOLUSI TANPA RONGGA */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            {/* Backdrop */}
             <motion.div
-              id="mobile-menu"
-              className="md:hidden absolute left-0 right-0 top-16 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="md:hidden fixed inset-0 bg-black/30 z-40"
+              onClick={() => setIsMenuOpen(false)}
+            />
+            
+            {/* Menu Panel - TANPA BORDER & SHADOW yang bikin rongga */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="md:hidden fixed top-16 left-0 right-0 bg-white dark:bg-gray-900 z-50"
             >
-              <div className="px-4 py-2 space-y-0">
-                {navItems.map((item) => (
-                  <button
-                    key={item.name}
-                    onClick={() => scrollToSection(item.href, item.route)}
-                    className={getMobileNavItemClasses(item)}
-                    aria-current={
-                      (location.pathname === '/' && activeSection === item.id) ||
-                      (location.pathname === item.route && item.route !== '/')
-                        ? 'page'
-                        : undefined
-                    }
-                  >
-                    {item.name}
-                  </button>
+              {/* Container dengan padding yang ketat */}
+              <div className="px-0 py-1">
+                {navItems.map((item, index) => (
+                  <div key={item.name} className="border-0">
+                    <button
+                      onClick={() => scrollToSection(item.href, item.route)}
+                      className={`w-full text-left px-6 py-4 text-base font-medium transition-all border-0 ${
+                        (location.pathname === '/' && activeSection === item.id) ||
+                        (location.pathname === item.route && item.route !== '/')
+                          ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      } ${index === 0 ? 'rounded-t-lg' : ''} ${
+                        index === navItems.length - 1 ? 'rounded-b-lg' : ''
+                      }`}
+                    >
+                      {item.name}
+                    </button>
+                    
+                    {/* Separator yang tidak bikin rongga */}
+                    {index < navItems.length - 1 && (
+                      <div className="mx-6 h-px bg-gray-100 dark:bg-gray-800" />
+                    )}
+                  </div>
                 ))}
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </>
+        )}
+      </AnimatePresence>
     </header>
   );
 };
