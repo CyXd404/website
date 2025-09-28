@@ -8,7 +8,8 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import LoadingSpinner from './components/LoadingSpinner';
 import Timeline from './components/Timeline';
-import ProtectedRoute from './components/ProtectedRoute';
+
+// ⛔ ProtectedRoute DIHAPUS
 
 // Lazy load components
 const Hero = lazy(() => import('./components/Hero'));
@@ -38,25 +39,11 @@ function App() {
                 <Route path="/home" element={<HomePage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/experience" element={<ExperiencePage />} />
-
-                {/* ✅ Lindungi halaman Projects & Contact */}
-                <Route
-                  path="/projects"
-                  element={
-                    <ProtectedRoute>
-                      <ProjectsPage />
-                    </ProtectedRoute>
-                  }
-                />
+                
+                {/* ✅ Tidak lagi dikunci */}
+                <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/education" element={<EducationPage />} />
-                <Route
-                  path="/contact"
-                  element={
-                    <ProtectedRoute>
-                      <ContactPage />
-                    </ProtectedRoute>
-                  }
-                />
+                <Route path="/contact" element={<ContactPage />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
