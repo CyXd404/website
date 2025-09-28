@@ -3,10 +3,12 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Auth0Provider } from '@auth0/auth0-react';
+
 import Header from './components/Header';
 import Footer from './components/Footer';
 import LoadingSpinner from './components/LoadingSpinner';
 import Timeline from './components/Timeline';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy load components
 const Hero = lazy(() => import('./components/Hero'));
@@ -36,9 +38,26 @@ function App() {
                 <Route path="/home" element={<HomePage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/experience" element={<ExperiencePage />} />
-                <Route path="/projects" element={<ProjectsPage />} />
+
+                {/* ✅ Lindungi halaman Projects & Contact */}
+                <Route
+                  path="/projects"
+                  element={
+                    <ProtectedRoute>
+                      <ProjectsPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/education" element={<EducationPage />} />
-                <Route path="/contact" element={<ContactPage />} />
+                <Route
+                  path="/contact"
+                  element={
+                    <ProtectedRoute>
+                      <ContactPage />
+                    </ProtectedRoute>
+                  }
+                />
+
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
@@ -66,7 +85,12 @@ function HomePage() {
 
 function AboutPage() {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="pt-20">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="pt-20"
+    >
       <div className="sr-only">
         <h1>Tentang Shawava Tritya</h1>
       </div>
@@ -77,7 +101,12 @@ function AboutPage() {
 
 function ExperiencePage() {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="pt-20">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="pt-20"
+    >
       <div className="sr-only">
         <h1>Pengalaman Kerja Shawava Tritya</h1>
       </div>
@@ -88,7 +117,12 @@ function ExperiencePage() {
 
 function ProjectsPage() {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="pt-20">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="pt-20"
+    >
       <div className="sr-only">
         <h1>Proyek Unggulan Shawava Tritya</h1>
       </div>
@@ -99,7 +133,12 @@ function ProjectsPage() {
 
 function EducationPage() {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="pt-20">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="pt-20"
+    >
       <div className="sr-only">
         <h1>Pendidikan dan Keahlian Shawava Tritya</h1>
       </div>
@@ -110,7 +149,12 @@ function EducationPage() {
 
 function ContactPage() {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="pt-20">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="pt-20"
+    >
       <div className="sr-only">
         <h1>Kontak Shawava Tritya</h1>
       </div>
