@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Shield, Clock } from 'lucide-react';
 
-const Contact = () => {
+const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     subject: '',
-    message: ''
+    message: '',
+    honeypot: '' // Anti-bot field (tidak ditampilkan ke user)
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,26 +31,40 @@ const Contact = () => {
     }
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Jika bot isi honeypot → langsung tolak
+    if (formData.honeypot.trim() !== '') {
+      setSubmitStatus('error');
+      return;
+    }
+
     const now = Date.now();
     const timeSinceLastSubmit = now - lastSubmitTime;
 
+    // Cek cooldown
     if (timeSinceLastSubmit < COOLDOWN_TIME) {
       setSubmitStatus('error');
       return;
     }
 
-    const hourlySubmissions = parseInt(localStorage.getItem('hourlySubmissions') || '0');
-    const lastHourReset = parseInt(localStorage.getItem('lastHourReset') || '0');
+    const hourlySubmissions = parseInt(
+      localStorage.getItem('hourlySubmissions') || '0'
+    );
+    const lastHourReset = parseInt(
+      localStorage.getItem('lastHourReset') || '0'
+    );
 
+    // Reset per jam
     if (now - lastHourReset > 3600000) {
-      localStorage.setItem('hourlySubmissions', '0');
+      localStorage.setItem('hourlySubissions', '0');
       localStorage.setItem('lastHourReset', now.toString());
     } else if (hourlySubmissions >= MAX_SUBMISSIONS_PER_HOUR) {
       setSubmitStatus('error');
@@ -63,15 +78,24 @@ const Contact = () => {
       const response = await fetch('/.netlify/functions/sendEmail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData)
       });
 
       if (!response.ok) throw new Error('Pengiriman gagal');
 
       setLastSubmitTime(now);
-      localStorage.setItem('hourlySubmissions', (hourlySubmissions + 1).toString());
+      localStorage.setItem(
+        'hourlySubmissions',
+        (hourlySubmissions + 1).toString()
+      );
       setSubmitStatus('success');
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: '',
+        honeypot: ''
+      });
     } catch {
       setSubmitStatus('error');
     } finally {
@@ -82,14 +106,21 @@ const Contact = () => {
   const canSubmit = () => {
     const now = Date.now();
     const timeSinceLastSubmit = now - lastSubmitTime;
-    const hourlySubmissions = parseInt(localStorage.getItem('hourlySubmissions') || '0');
-    return timeSinceLastSubmit >= COOLDOWN_TIME && hourlySubmissions < MAX_SUBMISSIONS_PER_HOUR;
+    const hourlySubmissions = parseInt(
+      localStorage.getItem('hourlySubmissions') || '0'
+    );
+    return (
+      timeSinceLastSubmit >= COOLDOWN_TIME &&
+      hourlySubmissions < MAX_SUBMISSIONS_PER_HOUR
+    );
   };
 
   const getRemainingCooldown = () => {
     const now = Date.now();
     const timeSinceLastSubmit = now - lastSubmitTime;
-    const remaining = Math.ceil((COOLDOWN_TIME - timeSinceLastSubmit) / 1000);
+    const remaining = Math.ceil(
+      (COOLDOWN_TIME - timeSinceLastSubmit) / 1000
+    );
     return remaining > 0 ? remaining : 0;
   };
 
@@ -165,7 +196,7 @@ const Contact = () => {
                     className="flex items-center space-x-4 p-4 sm:p-5 bg-white dark:bg-gray-900 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 border border-gray-100 dark:border-gray-700"
                     {...(info.link.startsWith('http') && {
                       target: '_blank',
-                      rel: 'noopener noreferrer',
+                      rel: 'noopener noreferrer'
                     })}
                   >
                     <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 dark:bg-blue-500 group-hover:bg-blue-700 dark:group-hover:bg-blue-600 text-white rounded-lg flex items-center justify-center transition-colors duration-300">
@@ -210,6 +241,17 @@ const Contact = () => {
               onSubmit={handleSubmit}
               className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-xl shadow-lg space-y-6 border border-gray-100 dark:border-gray-700"
             >
+              {/* HONEYPOT FIELD (TERSEMBUNYI) */}
+              <input
+                type="text"
+                name="honeypot"
+                value={formData.honeypot}
+                onChange={handleChange}
+                style={{ display: 'none' }}
+                tabIndex={-1}
+                autoComplete="off"
+              />
+
               {submitStatus === 'success' && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -354,7 +396,9 @@ const Contact = () => {
                   <>
                     <Clock size={18} className="sm:w-5 sm:h-5" />
                     <span>
-                      Tunggu {getRemainingCooldown() > 0 ? `${getRemainingCooldown()}s` : 'sebentar'}
+                      Tunggu {getRemainingCooldown() > 0
+                        ? `${getRemainingCooldown()}s`
+                        : 'sebentar'}
                     </span>
                   </>
                 ) : (
