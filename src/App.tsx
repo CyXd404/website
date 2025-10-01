@@ -8,6 +8,11 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import LoadingSpinner from './components/LoadingSpinner';
 import Timeline from './components/Timeline';
+import Skills from './components/Skills';
+import ScrollProgress from './components/ScrollProgress';
+import ParticleBackground from './components/ParticleBackground';
+import BackToTop from './components/BackToTop';
+import VisitorCounter from './components/VisitorCounter';
 
 // ⛔ ProtectedRoute DIHAPUS
 
@@ -32,6 +37,8 @@ function App() {
       <ThemeProvider>
         <Router>
           <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
+            <ScrollProgress />
+            <ParticleBackground />
             <Header />
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>
@@ -49,6 +56,8 @@ function App() {
               </Routes>
             </Suspense>
             <Footer />
+            <BackToTop />
+            <VisitorCounter />
           </div>
         </Router>
       </ThemeProvider>
@@ -61,6 +70,7 @@ function HomePage() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
       <Hero />
       <About />
+      <Skills />
       <Experience />
       <Timeline />
       <Projects />

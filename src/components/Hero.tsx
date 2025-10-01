@@ -3,11 +3,19 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Github, Linkedin, Mail, User, Briefcase, FolderOpen, GraduationCap, MessageCircle, FileText } from 'lucide-react';
 import { useGreeting } from '../hooks/useGreeting';
+import { useTypingEffect } from '../hooks/useTypingEffect';
 import ResumeModal from './ResumeModal';
 
 const Hero = () => {
   const greeting = useGreeting();
   const [isResumeModalOpen, setIsResumeModalOpen] = React.useState(false);
+  const typingText = useTypingEffect([
+    'Project Developer',
+    'Data Enthusiast',
+    'Arduino Expert',
+    'IoT Developer',
+    'Network Specialist'
+  ], 100, 50, 2000);
   
   const navigationFlow = [
     { path: '/about', label: 'About Me', icon: User, description: 'Learn about me' },
@@ -46,9 +54,18 @@ const Hero = () => {
             <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-4 max-w-4xl mx-auto leading-relaxed px-4">
               {greeting}
             </p>
-            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
-              Saya adalah <span className="font-semibold text-gray-800 dark:text-gray-200">Pelajar SMK – Teknik Komputer dan Jaringan</span> yang passionate sebagai Project Developer & Data Enthusiast.
-            </p>
+            <div className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
+              <p className="mb-2">
+                Saya adalah <span className="font-semibold text-gray-800 dark:text-gray-200">Pelajar SMK – Teknik Komputer dan Jaringan</span>
+              </p>
+              <p className="flex items-center justify-center flex-wrap">
+                <span className="mr-2">Passionate sebagai</span>
+                <span className="font-bold text-blue-600 dark:text-blue-400 min-w-[240px] text-left">
+                  {typingText}
+                  <span className="animate-pulse">|</span>
+                </span>
+              </p>
+            </div>
           </motion.div>
 
           {/* Navigation Flow */}
@@ -127,7 +144,7 @@ const Hero = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.2 }}
-            className="flex justify-center space-x-4 sm:space-x-6 px-4"
+            className="flex justify-center space-x-4 sm:space-x-6 px-4 pb-8"
           >
             <motion.a
               href="https://github.com/CyXd404"

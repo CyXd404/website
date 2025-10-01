@@ -64,7 +64,6 @@ const Education = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-2xl font-bold text-gray-900 mb-8 text-center"
             className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center"
           >
             Pendidikan
@@ -152,7 +151,6 @@ const Education = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-2xl font-bold text-gray-900 mb-8 text-center"
             className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center"
           >
             Keahlian

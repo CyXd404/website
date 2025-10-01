@@ -116,8 +116,7 @@ const Footer = () => {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="border-t border-gray-800 pt-8 text-center"
-         className="border-t border-gray-800 dark:border-gray-700 pt-8 text-center"
+          className="border-t border-gray-800 dark:border-gray-700 pt-8 text-center"
         >
           <p className="text-gray-400 dark:text-gray-300 flex items-center justify-center space-x-1">
             <span>© {currentYear} Shawava Tritya. Made with</span>
