@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Auth0Provider } from '@auth0/auth0-react';
+import { ToastProvider } from './components/ToastNotification';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -24,6 +26,12 @@ const Projects = lazy(() => import('./components/Projects'));
 const Education = lazy(() => import('./components/Education'));
 const Contact = lazy(() => import('./components/Contact'));
 const NotFound = lazy(() => import('./components/NotFound'));
+const Testimonials = lazy(() => import('./components/Testimonials'));
+
+function KeyboardShortcutsWrapper() {
+  useKeyboardShortcuts();
+  return null;
+}
 
 function App() {
   return (
@@ -35,11 +43,13 @@ function App() {
       }}
     >
       <ThemeProvider>
-        <Router>
-          <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
-            <ScrollProgress />
-            <ParticleBackground />
-            <Header />
+        <ToastProvider>
+          <Router>
+            <KeyboardShortcutsWrapper />
+            <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
+              <ScrollProgress />
+              <ParticleBackground />
+              <Header />
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
@@ -60,7 +70,8 @@ function App() {
             <VisitorCounter />
           </div>
         </Router>
-      </ThemeProvider>
+      </ToastProvider>
+    </ThemeProvider>
     </Auth0Provider>
   );
 }
@@ -74,6 +85,7 @@ function HomePage() {
       <Experience />
       <Timeline />
       <Projects />
+      <Testimonials />
       <Education />
       <Contact />
     </motion.div>

@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Send, Shield, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Phone, MapPin, Send, Shield, Clock, Download, User, MessageSquare } from 'lucide-react';
+import { useToast } from './ToastNotification';
+import CopyEmail from './CopyEmail';
 
 const Contact: React.FC = () => {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,6 +19,8 @@ const Contact: React.FC = () => {
   const [lastSubmitTime, setLastSubmitTime] = useState<number>(() => {
     return parseInt(localStorage.getItem('lastSubmitTime') || '0');
   });
+  const [isTyping, setIsTyping] = useState<{[key: string]: boolean}>({});
+  const [typingTimeout, setTypingTimeout] = useState<{[key: string]: NodeJS.Timeout | null}>({});
 
   const COOLDOWN_TIME = 60000; // 1 menit
   const MAX_SUBMISSIONS_PER_HOUR = 3;
@@ -34,7 +39,23 @@ const Contact: React.FC = () => {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const fieldName = e.target.name;
+    setFormData({ ...formData, [fieldName]: e.target.value });
+
+    // Set typing indicator
+    setIsTyping({ ...isTyping, [fieldName]: true });
+
+    // Clear previous timeout
+    if (typingTimeout[fieldName]) {
+      clearTimeout(typingTimeout[fieldName]);
+    }
+
+    // Set new timeout to remove typing indicator after 1 second
+    const timeout = setTimeout(() => {
+      setIsTyping({ ...isTyping, [fieldName]: false });
+    }, 1000);
+
+    setTypingTimeout({ ...typingTimeout, [fieldName]: timeout });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,6 +143,31 @@ const Contact: React.FC = () => {
       (COOLDOWN_TIME - timeSinceLastSubmit) / 1000
     );
     return remaining > 0 ? remaining : 0;
+  };
+
+  const downloadVCard = () => {
+    const vCard = `BEGIN:VCARD
+VERSION:3.0
+FN:Shawava Tritya
+TEL;TYPE=CELL:+6285187805786
+EMAIL:shawavatritya@gmail.com
+ADR;TYPE=HOME:;;Cileungsi;Bogor;Jawa Barat;;Indonesia
+URL:https://github.com/CyXd404
+URL:https://www.linkedin.com/in/shawava-tritya
+TITLE:Pelajar SMK - Teknik Komputer dan Jaringan
+ORG:SMK Negeri 1 Cileungsi
+NOTE:Project Developer & Data Enthusiast | Arduino | IoT | Network Installation
+END:VCARD`;
+
+    const blob = new Blob([vCard], { type: 'text/vcard' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Shawava_Tritya.vcf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   const contactInfo = [
@@ -213,6 +259,16 @@ const Contact: React.FC = () => {
                   </motion.a>
                 ))}
 
+                <motion.button
+                  onClick={downloadVCard}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full flex items-center justify-center space-x-3 p-4 sm:p-5 bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-500 dark:to-emerald-500 text-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 mt-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <Download className="w-5 h-5" />
+                  <span className="font-semibold text-sm sm:text-base">Download Contact Card (vCard)</span>
+                </motion.button>
+
                 <div className="rounded-xl overflow-hidden shadow-md mt-6">
                   <iframe
                     title="Domisili Map"
@@ -303,9 +359,22 @@ const Contact: React.FC = () => {
                 <div>
                   <label
                     htmlFor="name"
-                    className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2"
+                    className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2 flex items-center justify-between"
                   >
-                    Nama
+                    <span>Nama</span>
+                    <AnimatePresence>
+                      {isTyping.name && (
+                        <motion.span
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="flex items-center text-xs text-blue-600 dark:text-blue-400"
+                        >
+                          <User className="w-3 h-3 mr-1 animate-pulse" />
+                          mengetik...
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
                   </label>
                   <input
                     type="text"
@@ -323,9 +392,22 @@ const Contact: React.FC = () => {
                 <div>
                   <label
                     htmlFor="email"
-                    className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2"
+                    className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2 flex items-center justify-between"
                   >
-                    Email
+                    <span>Email</span>
+                    <AnimatePresence>
+                      {isTyping.email && (
+                        <motion.span
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="flex items-center text-xs text-blue-600 dark:text-blue-400"
+                        >
+                          <Mail className="w-3 h-3 mr-1 animate-pulse" />
+                          mengetik...
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
                   </label>
                   <input
                     type="email"
@@ -344,9 +426,22 @@ const Contact: React.FC = () => {
               <div>
                 <label
                   htmlFor="subject"
-                  className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2"
+                  className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2 flex items-center justify-between"
                 >
-                  Subjek
+                  <span>Subjek</span>
+                  <AnimatePresence>
+                    {isTyping.subject && (
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="flex items-center text-xs text-blue-600 dark:text-blue-400"
+                      >
+                        <MessageSquare className="w-3 h-3 mr-1 animate-pulse" />
+                        mengetik...
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </label>
                 <input
                   type="text"
@@ -364,9 +459,22 @@ const Contact: React.FC = () => {
               <div>
                 <label
                   htmlFor="message"
-                  className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2"
+                  className="block text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium mb-2 flex items-center justify-between"
                 >
-                  Pesan
+                  <span>Pesan</span>
+                  <AnimatePresence>
+                    {isTyping.message && (
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="flex items-center text-xs text-blue-600 dark:text-blue-400"
+                      >
+                        <MessageSquare className="w-3 h-3 mr-1 animate-pulse" />
+                        mengetik...
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </label>
                 <textarea
                   id="message"

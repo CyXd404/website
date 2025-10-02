@@ -1,31 +1,58 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Eye, TrendingUp } from 'lucide-react';
+import { supabase, getVisitorStats, trackVisitor, type VisitorStats } from '../lib/supabase';
 
 const VisitorCounter = () => {
-  const [visitors, setVisitors] = useState(0);
-  const [views, setViews] = useState(0);
-  const targetVisitors = 1247;
-  const targetViews = 3892;
+  const [stats, setStats] = useState<VisitorStats>({
+    total_visitors: 0,
+    total_page_views: 0,
+    today_visitors: 0,
+    today_page_views: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const duration = 2000;
-    const steps = 60;
-    const visitorIncrement = targetVisitors / steps;
-    const viewIncrement = targetViews / steps;
-    let currentStep = 0;
+    const initializeTracking = async () => {
+      await trackVisitor();
+      const initialStats = await getVisitorStats();
+      setStats(initialStats);
+      setIsLoading(false);
+    };
 
-    const timer = setInterval(() => {
-      currentStep++;
-      setVisitors(Math.min(Math.floor(visitorIncrement * currentStep), targetVisitors));
-      setViews(Math.min(Math.floor(viewIncrement * currentStep), targetViews));
+    initializeTracking();
 
-      if (currentStep >= steps) {
-        clearInterval(timer);
-      }
-    }, duration / steps);
+    const channel = supabase
+      .channel('visitor-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'visitors'
+        },
+        async () => {
+          const updatedStats = await getVisitorStats();
+          setStats(updatedStats);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'page_views'
+        },
+        async () => {
+          const updatedStats = await getVisitorStats();
+          setStats(updatedStats);
+        }
+      )
+      .subscribe();
 
-    return () => clearInterval(timer);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (
@@ -47,15 +74,18 @@ const VisitorCounter = () => {
               <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mr-2">
                 <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
-              <span className="text-xs text-gray-600 dark:text-gray-400">Visitors</span>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Visitors</span>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500">Total</span>
+              </div>
             </div>
             <motion.span
-              key={visitors}
+              key={stats.total_visitors}
               initial={{ scale: 1.2, color: '#3B82F6' }}
               animate={{ scale: 1, color: 'inherit' }}
               className="text-sm font-bold text-gray-900 dark:text-white"
             >
-              {visitors.toLocaleString()}
+              {isLoading ? '...' : stats.total_visitors.toLocaleString()}
             </motion.span>
           </div>
 
@@ -66,15 +96,18 @@ const VisitorCounter = () => {
               <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center mr-2">
                 <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <span className="text-xs text-gray-600 dark:text-gray-400">Views</span>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Views</span>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500">Total</span>
+              </div>
             </div>
             <motion.span
-              key={views}
+              key={stats.total_page_views}
               initial={{ scale: 1.2, color: '#10B981' }}
               animate={{ scale: 1, color: 'inherit' }}
               className="text-sm font-bold text-gray-900 dark:text-white"
             >
-              {views.toLocaleString()}
+              {isLoading ? '...' : stats.total_page_views.toLocaleString()}
             </motion.span>
           </div>
         </div>
