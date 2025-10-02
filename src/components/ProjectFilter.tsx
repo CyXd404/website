@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Filter } from 'lucide-react';
+import { Search, X, ListFilter as Filter } from 'lucide-react';
 
 interface ProjectFilterProps {
   onSearch: (query: string) => void;
