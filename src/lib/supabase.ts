@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getOrCreateVisitorIdentifier, isNewVisitor } from './fingerprint';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -20,52 +21,68 @@ export interface VisitorStats {
   today_page_views: number;
 }
 
-export const getSessionId = (): string => {
-  let sessionId = localStorage.getItem('visitor_session_id');
-
-  if (!sessionId) {
-    sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('visitor_session_id', sessionId);
-  }
-
-  return sessionId;
-};
+let lastTrackTime = 0;
+const TRACK_DEBOUNCE = 5000;
 
 export const trackVisitor = async () => {
   try {
-    const sessionId = getSessionId();
+    const now = Date.now();
+
+    if (now - lastTrackTime < TRACK_DEBOUNCE) {
+      return;
+    }
+
+    lastTrackTime = now;
+
+    const identifier = await getOrCreateVisitorIdentifier();
     const userAgent = navigator.userAgent;
+    const isNew = isNewVisitor();
 
     const { data: existingVisitor } = await supabase
       .from('visitors')
       .select('*')
-      .eq('session_id', sessionId)
+      .eq('session_id', identifier.sessionId)
       .maybeSingle();
 
     if (existingVisitor) {
+      const timeSinceLastVisit = now - new Date(existingVisitor.last_visit).getTime();
+      const shouldIncrementPageView = timeSinceLastVisit > 30000;
+
       await supabase
         .from('visitors')
         .update({
-          page_views: existingVisitor.page_views + 1,
+          page_views: shouldIncrementPageView
+            ? existingVisitor.page_views + 1
+            : existingVisitor.page_views,
           last_visit: new Date().toISOString()
         })
-        .eq('session_id', sessionId);
+        .eq('session_id', identifier.sessionId);
     } else {
       await supabase
         .from('visitors')
         .insert({
-          session_id: sessionId,
+          session_id: identifier.sessionId,
           user_agent: userAgent,
+          ip_address: identifier.fingerprint,
           page_views: 1
         });
     }
 
-    await supabase
-      .from('page_views')
-      .insert({
-        session_id: sessionId,
-        page_url: window.location.pathname
-      });
+    const currentPath = window.location.pathname;
+    const lastTrackedPath = sessionStorage.getItem('last_tracked_path');
+    const lastTrackedTime = parseInt(sessionStorage.getItem('last_tracked_time') || '0');
+
+    if (currentPath !== lastTrackedPath || (now - lastTrackedTime) > 30000) {
+      await supabase
+        .from('page_views')
+        .insert({
+          session_id: identifier.sessionId,
+          page_url: currentPath
+        });
+
+      sessionStorage.setItem('last_tracked_path', currentPath);
+      sessionStorage.setItem('last_tracked_time', now.toString());
+    }
 
   } catch (error) {
     console.error('Error tracking visitor:', error);

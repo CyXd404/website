@@ -15,8 +15,7 @@ import ScrollProgress from './components/ScrollProgress';
 import ParticleBackground from './components/ParticleBackground';
 import BackToTop from './components/BackToTop';
 import VisitorCounter from './components/VisitorCounter';
-
-// ⛔ ProtectedRoute DIHAPUS
+import ThemeTransitionEffect from './components/ThemeTransitionEffect';
 
 // Lazy load components
 const Hero = lazy(() => import('./components/Hero'));
@@ -27,6 +26,10 @@ const Education = lazy(() => import('./components/Education'));
 const Contact = lazy(() => import('./components/Contact'));
 const NotFound = lazy(() => import('./components/NotFound'));
 const Testimonials = lazy(() => import('./components/Testimonials'));
+const SkillsRadarChart = lazy(() => import('./components/SkillsRadarChart'));
+const InteractiveTimeline = lazy(() => import('./components/InteractiveTimeline'));
+const AchievementBadges = lazy(() => import('./components/AchievementBadges'));
+const AnalyticsDashboard = lazy(() => import('./components/AnalyticsDashboard'));
 
 function KeyboardShortcutsWrapper() {
   useKeyboardShortcuts();
@@ -46,7 +49,8 @@ function App() {
         <ToastProvider>
           <Router>
             <KeyboardShortcutsWrapper />
-            <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
+            <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300 overflow-x-hidden w-full">
+              <ThemeTransitionEffect />
               <ScrollProgress />
               <ParticleBackground />
               <Header />
@@ -82,10 +86,13 @@ function HomePage() {
       <Hero />
       <About />
       <Skills />
+      <section className="py-20 bg-gray-50 dark:bg-gray-800"><div className="container-responsive"><SkillsRadarChart /></div></section>
       <Experience />
-      <Timeline />
+      <section className="py-20 bg-white dark:bg-gray-900"><div className="container-responsive"><InteractiveTimeline /></div></section>
       <Projects />
       <Testimonials />
+      <section className="py-20 bg-gray-50 dark:bg-gray-800"><div className="container-responsive"><AchievementBadges /></div></section>
+      <section className="py-20 bg-white dark:bg-gray-900"><div className="container-responsive"><AnalyticsDashboard /></div></section>
       <Education />
       <Contact />
     </motion.div>

@@ -60,9 +60,9 @@ const VisitorCounter = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="fixed bottom-4 right-4 z-40"
+      className="fixed bottom-4 right-4 z-40 max-w-[calc(100vw-2rem)]"
     >
-      <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 min-w-[200px]">
+      <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 sm:p-4 min-w-[180px] sm:min-w-[200px] max-w-full">
         <div className="flex items-center mb-3">
           <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
           <h3 className="text-sm font-bold text-gray-900 dark:text-white">Statistik</h3>
