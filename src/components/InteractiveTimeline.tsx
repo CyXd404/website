@@ -1,15 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Award,
-  Briefcase,
-  GraduationCap,
-  Star,
-  Trophy,
-  Target,
-  Zap,
-  CheckCircle2
-} from 'lucide-react';
+import { Award, Briefcase, GraduationCap, Star, Trophy, Target, Zap, CircleCheck as CheckCircle2 } from 'lucide-react';
 
 interface TimelineEvent {
   id: string;
