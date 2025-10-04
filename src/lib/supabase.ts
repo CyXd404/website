@@ -1,18 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import { getOrCreateVisitorIdentifier, isNewVisitor } from './fingerprint';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+let supabase: any = null;
+
+try {
+  if (supabaseUrl && supabaseAnonKey) {
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false
+      }
+    });
+  } else {
+    console.warn('Supabase credentials not found. Visitor tracking will be disabled.');
+  }
+} catch (error) {
+  console.error('Failed to initialize Supabase client:', error);
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false
-  }
-});
+export { supabase };
 
 export interface VisitorStats {
   total_visitors: number;
@@ -25,6 +33,11 @@ let lastTrackTime = 0;
 const TRACK_DEBOUNCE = 5000;
 
 export const trackVisitor = async () => {
+  if (!supabase) {
+    console.warn('Supabase not initialized. Skipping visitor tracking.');
+    return;
+  }
+
   try {
     const now = Date.now();
 
@@ -90,6 +103,15 @@ export const trackVisitor = async () => {
 };
 
 export const getVisitorStats = async (): Promise<VisitorStats> => {
+  if (!supabase) {
+    return {
+      total_visitors: 0,
+      total_page_views: 0,
+      today_visitors: 0,
+      today_page_views: 0
+    };
+  }
+
   try {
     const { data, error } = await supabase.rpc('get_visitor_stats');
 

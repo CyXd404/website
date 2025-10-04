@@ -17,15 +17,26 @@ export interface BrowserFingerprint {
 }
 
 async function hashString(str: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (error) {
+    console.warn('Hash generation failed, using fallback:', error);
+    return str.split('').reduce((acc, char) => {
+      return ((acc << 5) - acc) + char.charCodeAt(0);
+    }, 0).toString(16);
+  }
 }
 
 function getCanvasFingerprint(): string {
   try {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return 'no-document';
+    }
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return 'no-canvas';
@@ -43,13 +54,18 @@ function getCanvasFingerprint(): string {
     ctx.fillText('Browser Fingerprint', 4, 17);
 
     return canvas.toDataURL();
-  } catch {
+  } catch (error) {
+    console.warn('Canvas fingerprinting failed:', error);
     return 'canvas-error';
   }
 }
 
 function getWebGLFingerprint(): string {
   try {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return 'no-document';
+    }
+
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (!gl) return 'no-webgl';
@@ -61,50 +77,62 @@ function getWebGLFingerprint(): string {
     const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
 
     return `${vendor}~${renderer}`;
-  } catch {
+  } catch (error) {
+    console.warn('WebGL fingerprinting failed:', error);
     return 'webgl-error';
   }
 }
 
 function getFontFingerprint(): string {
-  const baseFonts = ['monospace', 'sans-serif', 'serif'];
-  const testFonts = [
-    'Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Georgia',
-    'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS', 'Trebuchet MS',
-    'Impact', 'Lucida Console'
-  ];
+  try {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return 'no-document';
+    }
 
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return 'no-fonts';
+    const baseFonts = ['monospace', 'sans-serif', 'serif'];
+    const testFonts = [
+      'Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Georgia',
+      'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS', 'Trebuchet MS',
+      'Impact', 'Lucida Console'
+    ];
 
-  const testString = 'mmmmmmmmmmlli';
-  const textSize = '72px';
-  const baseWidths: { [key: string]: number } = {};
-  const availableFonts: string[] = [];
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return 'no-fonts';
 
-  baseFonts.forEach(baseFont => {
-    ctx.font = `${textSize} ${baseFont}`;
-    baseWidths[baseFont] = ctx.measureText(testString).width;
-  });
+    const testString = 'mmmmmmmmmmlli';
+    const textSize = '72px';
+    const baseWidths: { [key: string]: number } = {};
+    const availableFonts: string[] = [];
 
-  testFonts.forEach(font => {
     baseFonts.forEach(baseFont => {
-      ctx.font = `${textSize} ${font}, ${baseFont}`;
-      const width = ctx.measureText(testString).width;
-      if (width !== baseWidths[baseFont]) {
-        if (!availableFonts.includes(font)) {
-          availableFonts.push(font);
-        }
-      }
+      ctx.font = `${textSize} ${baseFont}`;
+      baseWidths[baseFont] = ctx.measureText(testString).width;
     });
-  });
 
-  return availableFonts.sort().join(',');
+    testFonts.forEach(font => {
+      baseFonts.forEach(baseFont => {
+        ctx.font = `${textSize} ${font}, ${baseFont}`;
+        const width = ctx.measureText(testString).width;
+        if (width !== baseWidths[baseFont]) {
+          if (!availableFonts.includes(font)) {
+            availableFonts.push(font);
+          }
+        }
+      });
+    });
+
+    return availableFonts.sort().join(',');
+  } catch (error) {
+    console.warn('Font fingerprinting failed:', error);
+    return 'font-error';
+  }
 }
 
 function getAudioFingerprint(): string {
   try {
+    if (typeof window === 'undefined') return 'no-window';
+
     const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) return 'no-audio';
 
@@ -129,34 +157,72 @@ function getAudioFingerprint(): string {
     context.close();
 
     return audioData;
-  } catch {
+  } catch (error) {
+    console.warn('Audio fingerprinting failed:', error);
     return 'audio-error';
   }
 }
 
 export async function generateBrowserFingerprint(): Promise<BrowserFingerprint> {
-  const components = {
-    screen: `${screen.width}x${screen.height}x${screen.colorDepth}`,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    language: navigator.language || 'unknown',
-    platform: navigator.platform || 'unknown',
-    userAgent: navigator.userAgent,
-    canvas: getCanvasFingerprint(),
-    webgl: getWebGLFingerprint(),
-    fonts: getFontFingerprint(),
-    audio: getAudioFingerprint(),
-    hardwareConcurrency: (navigator.hardwareConcurrency || 0).toString(),
-    deviceMemory: ((navigator as any).deviceMemory || 0).toString(),
-    colorDepth: screen.colorDepth.toString()
-  };
+  try {
+    const components = {
+      screen: typeof screen !== 'undefined'
+        ? `${screen.width}x${screen.height}x${screen.colorDepth}`
+        : 'unknown',
+      timezone: typeof Intl !== 'undefined'
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : 'unknown',
+      language: typeof navigator !== 'undefined'
+        ? (navigator.language || 'unknown')
+        : 'unknown',
+      platform: typeof navigator !== 'undefined'
+        ? (navigator.platform || 'unknown')
+        : 'unknown',
+      userAgent: typeof navigator !== 'undefined'
+        ? navigator.userAgent
+        : 'unknown',
+      canvas: getCanvasFingerprint(),
+      webgl: getWebGLFingerprint(),
+      fonts: getFontFingerprint(),
+      audio: getAudioFingerprint(),
+      hardwareConcurrency: typeof navigator !== 'undefined'
+        ? (navigator.hardwareConcurrency || 0).toString()
+        : '0',
+      deviceMemory: typeof navigator !== 'undefined'
+        ? ((navigator as any).deviceMemory || 0).toString()
+        : '0',
+      colorDepth: typeof screen !== 'undefined'
+        ? screen.colorDepth.toString()
+        : '24'
+    };
 
-  const fingerprintString = Object.values(components).join('|');
-  const fingerprint = await hashString(fingerprintString);
+    const fingerprintString = Object.values(components).join('|');
+    const fingerprint = await hashString(fingerprintString);
 
-  return {
-    fingerprint,
-    components
-  };
+    return {
+      fingerprint,
+      components
+    };
+  } catch (error) {
+    console.error('Failed to generate browser fingerprint:', error);
+    return {
+      fingerprint: 'fallback-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+      components: {
+        screen: 'error',
+        timezone: 'error',
+        language: 'error',
+        platform: 'error',
+        userAgent: 'error',
+        canvas: 'error',
+        webgl: 'error',
+        fonts: 'error',
+        audio: 'error',
+        hardwareConcurrency: 'error',
+        deviceMemory: 'error',
+        colorDepth: 'error'
+      }
+    };
+  }
 }
 
 export interface VisitorIdentifier {
@@ -168,59 +234,85 @@ export interface VisitorIdentifier {
 }
 
 export function getVisitorIdentifier(): VisitorIdentifier | null {
-  const stored = localStorage.getItem('visitor_identifier');
-  if (!stored) return null;
-
   try {
+    if (typeof localStorage === 'undefined') return null;
+
+    const stored = localStorage.getItem('visitor_identifier');
+    if (!stored) return null;
+
     return JSON.parse(stored) as VisitorIdentifier;
-  } catch {
+  } catch (error) {
+    console.warn('Failed to get visitor identifier:', error);
     return null;
   }
 }
 
 export function setVisitorIdentifier(identifier: VisitorIdentifier): void {
-  localStorage.setItem('visitor_identifier', JSON.stringify(identifier));
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('visitor_identifier', JSON.stringify(identifier));
+    }
+  } catch (error) {
+    console.warn('Failed to set visitor identifier:', error);
+  }
 }
 
 export async function getOrCreateVisitorIdentifier(): Promise<VisitorIdentifier> {
-  let identifier = getVisitorIdentifier();
-  const now = Date.now();
-  const SESSION_TIMEOUT = 30 * 60 * 1000;
+  try {
+    let identifier = getVisitorIdentifier();
+    const now = Date.now();
+    const SESSION_TIMEOUT = 30 * 60 * 1000;
 
-  const fp = await generateBrowserFingerprint();
+    const fp = await generateBrowserFingerprint();
 
-  if (!identifier || (now - identifier.lastActive) > SESSION_TIMEOUT) {
-    identifier = {
-      sessionId: `${now}-${Math.random().toString(36).substr(2, 9)}`,
-      fingerprint: fp.fingerprint,
-      lastActive: now,
-      firstVisit: identifier?.firstVisit || now,
-      visitCount: (identifier?.visitCount || 0) + 1
+    if (!identifier || (now - identifier.lastActive) > SESSION_TIMEOUT) {
+      identifier = {
+        sessionId: `${now}-${Math.random().toString(36).substr(2, 9)}`,
+        fingerprint: fp.fingerprint,
+        lastActive: now,
+        firstVisit: identifier?.firstVisit || now,
+        visitCount: (identifier?.visitCount || 0) + 1
+      };
+    } else if (identifier.fingerprint !== fp.fingerprint) {
+      identifier = {
+        ...identifier,
+        fingerprint: fp.fingerprint,
+        lastActive: now,
+        visitCount: identifier.visitCount + 1
+      };
+    } else {
+      identifier = {
+        ...identifier,
+        lastActive: now
+      };
+    }
+
+    setVisitorIdentifier(identifier);
+    return identifier;
+  } catch (error) {
+    console.error('Failed to get or create visitor identifier:', error);
+    const fallbackId: VisitorIdentifier = {
+      sessionId: `fallback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      fingerprint: 'fallback',
+      lastActive: Date.now(),
+      firstVisit: Date.now(),
+      visitCount: 1
     };
-  } else if (identifier.fingerprint !== fp.fingerprint) {
-    identifier = {
-      ...identifier,
-      fingerprint: fp.fingerprint,
-      lastActive: now,
-      visitCount: identifier.visitCount + 1
-    };
-  } else {
-    identifier = {
-      ...identifier,
-      lastActive: now
-    };
+    return fallbackId;
   }
-
-  setVisitorIdentifier(identifier);
-  return identifier;
 }
 
 export function isNewVisitor(): boolean {
-  const identifier = getVisitorIdentifier();
-  if (!identifier) return true;
+  try {
+    const identifier = getVisitorIdentifier();
+    if (!identifier) return true;
 
-  const SESSION_TIMEOUT = 30 * 60 * 1000;
-  const now = Date.now();
+    const SESSION_TIMEOUT = 30 * 60 * 1000;
+    const now = Date.now();
 
-  return (now - identifier.lastActive) > SESSION_TIMEOUT;
+    return (now - identifier.lastActive) > SESSION_TIMEOUT;
+  } catch (error) {
+    console.warn('Failed to check if new visitor:', error);
+    return true;
+  }
 }

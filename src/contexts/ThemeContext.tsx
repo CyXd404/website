@@ -19,24 +19,42 @@ export const useTheme = () => {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Check localStorage first, then system preference
-    const savedTheme = localStorage.getItem('theme') as Theme;
-    if (savedTheme) return savedTheme;
-    
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    try {
+      // Check localStorage first, then system preference
+      const savedTheme = localStorage.getItem('theme') as Theme;
+      if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
+        return savedTheme;
+      }
+    } catch (error) {
+      console.warn('Failed to read theme from localStorage:', error);
+    }
+
+    try {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch (error) {
+      return 'light';
+    }
   });
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    
-    // Remove previous theme class
-    root.classList.remove('light', 'dark');
-    
-    // Add current theme class
-    root.classList.add(theme);
-    
-    // Save to localStorage
-    localStorage.setItem('theme', theme);
+    try {
+      const root = window.document.documentElement;
+
+      // Remove previous theme class
+      root.classList.remove('light', 'dark');
+
+      // Add current theme class
+      root.classList.add(theme);
+
+      // Save to localStorage
+      try {
+        localStorage.setItem('theme', theme);
+      } catch (storageError) {
+        console.warn('Failed to save theme to localStorage:', storageError);
+      }
+    } catch (error) {
+      console.error('Failed to apply theme:', error);
+    }
   }, [theme]);
 
   const toggleTheme = () => {

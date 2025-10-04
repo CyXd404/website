@@ -14,13 +14,22 @@ const VisitorCounter = () => {
 
   useEffect(() => {
     const initializeTracking = async () => {
-      await trackVisitor();
-      const initialStats = await getVisitorStats();
-      setStats(initialStats);
-      setIsLoading(false);
+      try {
+        await trackVisitor();
+        const initialStats = await getVisitorStats();
+        setStats(initialStats);
+      } catch (error) {
+        console.error('Failed to initialize tracking:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     initializeTracking();
+
+    if (!supabase) {
+      return;
+    }
 
     const channel = supabase
       .channel('visitor-changes')
@@ -32,8 +41,12 @@ const VisitorCounter = () => {
           table: 'visitors'
         },
         async () => {
-          const updatedStats = await getVisitorStats();
-          setStats(updatedStats);
+          try {
+            const updatedStats = await getVisitorStats();
+            setStats(updatedStats);
+          } catch (error) {
+            console.error('Failed to update visitor stats:', error);
+          }
         }
       )
       .on(
@@ -44,14 +57,20 @@ const VisitorCounter = () => {
           table: 'page_views'
         },
         async () => {
-          const updatedStats = await getVisitorStats();
-          setStats(updatedStats);
+          try {
+            const updatedStats = await getVisitorStats();
+            setStats(updatedStats);
+          } catch (error) {
+            console.error('Failed to update page view stats:', error);
+          }
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (supabase) {
+        supabase.removeChannel(channel);
+      }
     };
   }, []);
 
