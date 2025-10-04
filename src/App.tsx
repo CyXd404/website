@@ -37,12 +37,15 @@ function KeyboardShortcutsWrapper() {
 }
 
 function App() {
+  // Menentukan redirect_uri dengan aman untuk mencegah error saat reload
+  const redirectUri = typeof window !== 'undefined' ? window.location.origin : '';
+
   return (
     <Auth0Provider
       domain={import.meta.env.VITE_AUTH0_DOMAIN}
       clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
       authorizationParams={{
-        redirect_uri: window.location.origin,
+        redirect_uri: redirectUri,
       }}
     >
       <ThemeProvider>
