@@ -84,7 +84,6 @@ const VisitorCounter = () => {
       <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 sm:p-4 min-w-[180px] sm:min-w-[200px] max-w-full">
         <div className="flex items-center mb-3">
           <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">Statistik</h3>
         </div>
 
         <div className="space-y-3">
@@ -94,7 +93,6 @@ const VisitorCounter = () => {
                 <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs text-gray-600 dark:text-gray-400">Visitors</span>
                 <span className="text-[10px] text-gray-400 dark:text-gray-500">Total</span>
               </div>
             </div>
@@ -116,7 +114,6 @@ const VisitorCounter = () => {
                 <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs text-gray-600 dark:text-gray-400">Views</span>
                 <span className="text-[10px] text-gray-400 dark:text-gray-500">Total</span>
               </div>
             </div>
