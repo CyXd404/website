@@ -14,7 +14,6 @@ import Skills from './components/Skills';
 import ScrollProgress from './components/ScrollProgress';
 import ParticleBackground from './components/ParticleBackground';
 import BackToTop from './components/BackToTop';
-import VisitorCounter from './components/VisitorCounter';
 import ThemeTransitionEffect from './components/ThemeTransitionEffect';
 
 // Lazy load components
@@ -25,7 +24,6 @@ const Projects = lazy(() => import('./components/Projects'));
 const Education = lazy(() => import('./components/Education'));
 const Contact = lazy(() => import('./components/Contact'));
 const NotFound = lazy(() => import('./components/NotFound'));
-const Testimonials = lazy(() => import('./components/Testimonials'));
 const SkillsRadarChart = lazy(() => import('./components/SkillsRadarChart'));
 const InteractiveTimeline = lazy(() => import('./components/InteractiveTimeline'));
 const AchievementBadges = lazy(() => import('./components/AchievementBadges'));
@@ -74,7 +72,6 @@ function App() {
             </Suspense>
             <Footer />
             <BackToTop />
-            <VisitorCounter />
           </div>
         </Router>
       </ToastProvider>
@@ -93,7 +90,6 @@ function HomePage() {
       <Experience />
       <section className="py-20 bg-white dark:bg-gray-900"><div className="container-responsive"><InteractiveTimeline /></div></section>
       <Projects />
-      <Testimonials />
       <section className="py-20 bg-gray-50 dark:bg-gray-800"><div className="container-responsive"><AchievementBadges /></div></section>
       <section className="py-20 bg-white dark:bg-gray-900"><div className="container-responsive"><AnalyticsDashboard /></div></section>
       <Education />

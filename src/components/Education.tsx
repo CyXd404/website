@@ -51,24 +51,14 @@ const Education = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">Pendidikan & Keahlian</h2>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">Pendidikan</h2>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            Latar belakang pendidikan dan keahlian saya
+            Latar belakang pendidikan saya
           </p>
         </motion.div>
 
         {/* Education */}
-        <div className="mb-16">
-          <motion.h3
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center"
-          >
-            Pendidikan
-          </motion.h3>
-          
+        <div>
           <div className="space-y-8">
             {education.map((edu, index) => (
               <motion.div
@@ -144,39 +134,6 @@ const Education = () => {
           </div>
         </div>
 
-        {/* Certifications */}
-        <div>
-          <motion.h3
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center"
-          >
-            Keahlian
-          </motion.h3>
-          
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {certifications.map((cert, index) => (
-              <motion.div
-                key={cert.name}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: index * 0.1 }}
-                className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 text-center border border-gray-100 dark:border-gray-700"
-              >
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-emerald-500 dark:from-blue-500 dark:to-emerald-400 text-white rounded-full flex items-center justify-center mx-auto mb-4 hover:scale-105 transition-transform duration-300">
-                  <Award size={28} />
-                </div>
-                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{cert.name}</h4>
-                <p className="text-blue-600 dark:text-blue-400 font-medium mb-2 text-sm leading-relaxed">{cert.issuer}</p>
-                {cert.date && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">Issued: {cert.date}</p>}
-                {cert.credentialId && <p className="text-gray-500 dark:text-gray-400 text-xs">ID: {cert.credentialId}</p>}
-              </motion.div>
-            ))}
-          </div>
-        </div>
       </div>
     </section>
   );
