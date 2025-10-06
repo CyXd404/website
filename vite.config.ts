@@ -19,13 +19,33 @@ export default defineConfig({
     sourcemap: false,
     minify: 'terser',
     target: 'es2015',
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          motion: ['framer-motion'],
-          icons: ['lucide-react'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor';
+            }
+            if (id.includes('react-router-dom')) {
+              return 'router';
+            }
+            if (id.includes('framer-motion')) {
+              return 'motion';
+            }
+            if (id.includes('lucide-react')) {
+              return 'icons';
+            }
+            if (id.includes('chart.js') || id.includes('react-chartjs-2')) {
+              return 'charts';
+            }
+            if (id.includes('@auth0')) {
+              return 'auth';
+            }
+            if (id.includes('@supabase')) {
+              return 'supabase';
+            }
+          }
         },
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name.split('.');
@@ -44,12 +64,15 @@ export default defineConfig({
     },
     terserOptions: {
       compress: {
-        drop_console: true,
+        drop_console: false,
         drop_debugger: true,
         pure_funcs: ['console.log', 'console.info'],
       },
       mangle: {
         safari10: true,
+      },
+      output: {
+        comments: false,
       },
     },
   },

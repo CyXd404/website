@@ -33,8 +33,54 @@
     
     <!-- Theme color -->
     <meta name="theme-color" content="#3B82F6" />
-    
+
+    <!-- Cache control -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <title>Shawava Tritya - Portfolio</title>
+
+    <!-- Module error handler -->
+    <script>
+      (function() {
+        let moduleErrorCount = 0;
+        const MAX_RETRIES = 2;
+
+        window.addEventListener('error', function(e) {
+          if (e.message && (
+            e.message.includes('Failed to fetch') ||
+            e.message.includes('Importing a module') ||
+            e.message.includes('dynamically imported module')
+          )) {
+            moduleErrorCount++;
+            console.warn('Module loading error detected:', e.message);
+
+            if (moduleErrorCount <= MAX_RETRIES) {
+              console.log('Attempting to reload... (attempt ' + moduleErrorCount + ')');
+
+              if ('caches' in window) {
+                caches.keys().then(function(names) {
+                  return Promise.all(
+                    names.map(function(name) {
+                      return caches.delete(name);
+                    })
+                  );
+                }).then(function() {
+                  window.location.reload();
+                });
+              } else {
+                setTimeout(function() {
+                  window.location.reload();
+                }, 500);
+              }
+
+              e.preventDefault();
+            }
+          }
+        }, true);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
